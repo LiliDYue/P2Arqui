@@ -38,7 +38,7 @@ int isOutsideBoard(int x, int y);
 unsigned int next = 1;
 int in_game = 1;
 int last_move = 0;
-int score = 2; //score funciona como el tama?o de la serpiente
+int tamanio = 2; // tamaño de la serpiente
 int x_coord = 0;
 int y_coord = 0;
 
@@ -52,23 +52,18 @@ void main()
     {
         move(*d_pad_up, *d_pad_do, *d_pad_ri, *d_pad_le);
         eatApple();
-        printf("\nsnake_head in (%d, %d)\n", x_coord, y_coord);
-        printf("\nscore: %d", score);
         wait(4000);
     }
     
-
-
-    printf("Game Over");
 }
 
 // verifica si se come una manzana, se llama en el ciclo while
 void eatApple() {
     if (isAppleEaten()) { //verifica si estamos arriba de una manzana
          // aumenta la longitud de la serpiente solo si no ha alcanzado el tama?o m?ximo
-        if (score < led_matrix_height * led_matrix_width) {
-            score++; //score funciona como el tama?o de la serpiente
-            score++;
+        if (tamanio < led_matrix_height * led_matrix_width) {
+            tamanio++; //score funciona como el tama?o de la serpiente
+            tamanio++;
         }
         generateApple(); // genera una nueva manzana despues de ser comida
     }
@@ -97,7 +92,7 @@ void generateApple(){ //genera la manzana
 
 //verifica si las coordenadas de la manzana se encuentran en el cuerpo de la serpiente
 int isSnakeBody(int x, int y) {
-    for (int i = 0; i < score; i++) { //recorre el cuerpo de la serpiente y si se encuentra coincidencia retorna 1
+    for (int i = 0; i < tamanio; i++) { //recorre el cuerpo de la serpiente y si se encuentra coincidencia retorna 1
         if (snake_body[i] == led_base + (led_matrix_width * y) + x) {
             return 1;
         }
@@ -113,8 +108,8 @@ int isOutsideBoard(int x, int y) {
 //actualiza los leds del tablero para representar a la serpiente
 void updateSnake()
 {
-    if (score) { //verifica que la serpiente exista
-        for (int i = score - 1; i > 0; i--) {
+    if (tamanio) { //verifica que la serpiente exista
+        for (int i = tamanio - 1; i > 0; i--) {
             // Guarda la posici?n actual de la cabeza como el siguiente segmento del cuerpo
             snake_body[i] = snake_body[i - 1]; // guarda cada pedazo de la serpiente
         }
@@ -125,7 +120,7 @@ void updateSnake()
     snake_head = led_base + (led_matrix_width * y_coord) + x_coord;
 
     //verifica si la cabeza de la serpiente colisiona con su propio cuerpo
-    for (int i = 1; i < score; i++) {
+    for (int i = 1; i < tamanio; i++) {
         if (snake_head == snake_body[i]) {
             in_game = 0; // si la serpiente se ha tocado a s? misma, el juego termina
             return;
@@ -136,13 +131,13 @@ void updateSnake()
     *snake_head = 0xFF0000;
 
     // si la longitud de la serpiente es mayor que el puntaje, apaga el ?ltimo led
-    if (score) {
-        *snake_body[score - 1] = 0x000000; // apaga el led
-        snake_body[score - 1] = 0; // elimina la referencia al led apagado del cuerpo
+    if (tamanio) {
+        *snake_body[tamanio - 1] = 0x000000; // apaga el led
+        snake_body[tamanio - 1] = 0; // elimina la referencia al led apagado del cuerpo
     }
 
     // enciende los leds de cada pedazo de la serpiente
-    for (int i = 1; i < score && i < score; i++) {
+    for (int i = 1; i < tamanio && i < tamanio; i++) {
         *snake_body[i] = 0xFF0000; // color rojo
     }
 }
@@ -168,7 +163,7 @@ int movement(int d_pad, int direction, int oposite) //no permite movimientos a l
 {
     if ((d_pad == 1) || (last_move == direction)) //si se presiona un boton del d pad
     {
-        if ((last_move != oposite) || (score == 1))// verifica la direccion y no permite un movimietno al lado contrario
+        if ((last_move != oposite) || (tamanio == 1))// verifica la direccion y no permite un movimietno al lado contrario
         {
             return 1;
         }
@@ -179,8 +174,8 @@ int movement(int d_pad, int direction, int oposite) //no permite movimientos a l
 void move(int up, int down, int right, int left) //mueve a la serpiente
 {
     //antes de mover la serpiente, apaga el ?ltimo segmento del cuerpo
-    if (score) {
-        *snake_body[score - 1] = 0x000000;
+    if (tamanio) {
+        *snake_body[tamanio - 1] = 0x000000;
     }
 
 
@@ -275,6 +270,5 @@ void wait(int ciclos) //wait
 {
     for (int i = 0; i < ciclos; i++)
     {
-        i++;
     }
 }

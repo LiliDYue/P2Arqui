@@ -275,5 +275,6 @@ void wait(int ciclos) //wait
 {
     for (int i = 0; i < ciclos; i++)
     {
+        i++;
     }
 }

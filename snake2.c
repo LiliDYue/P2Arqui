@@ -4,22 +4,24 @@
 #define led_matrix_height LED_MATRIX_0_HEIGHT
 #define led_matrix_width LED_MATRIX_0_WIDTH
 
-// Se almacena la direccion inicio de la matriz
 volatile unsigned int *led_base = (volatile unsigned int *)LED_MATRIX_0_BASE;
 
-// Se almacena la direccion de los D-Pads
 volatile unsigned int *d_pad_up = (volatile unsigned int *)D_PAD_0_UP;
 volatile unsigned int *d_pad_do = (volatile unsigned int *)D_PAD_0_DOWN;
 volatile unsigned int *d_pad_le = (volatile unsigned int *)D_PAD_0_LEFT;
 volatile unsigned int *d_pad_ri = (volatile unsigned int *)D_PAD_0_RIGHT;
 
-volatile unsigned int *snake_body[(led_matrix_height*2) * led_matrix_width*2];
+volatile unsigned int *snake_body[(led_matrix_height * 2) * (led_matrix_width * 2)];
 volatile unsigned int *snake_head = 0;
-volatile unsigned int *apple = 0;
+volatile unsigned int *apple[4];
 
-void srand(unsigned int seed);
-int rand();
-void wait(int ciclos);
+unsigned int next = 1;
+int in_game = 1;
+int last_move = 0;
+int tamanio = 1;
+int x_coord = 0;
+int y_coord = 0;
+
 void initSnake();
 void clearLedMatrix();
 void generateApple();
@@ -34,130 +36,55 @@ int isAppleEaten();
 void eatApple();
 int isSnakeBody(int x, int y);
 int isOutsideBoard(int x, int y);
+void drawBlock(int x, int y, int color);
+void clearBlock(int x, int y);
+void srand(unsigned int seed);
+int rand();
+void wait(int ciclos);
 
-unsigned int next = 1;
-int in_game = 1;
-int last_move = 0;
-int tamanio = 2; // tamaño de la serpiente
-int x_coord = 0;
-int y_coord = 0;
 
-void main()
-{
+void main() {
     clearLedMatrix();
     initSnake();
     generateApple();
 
-    while (in_game)
-    {
+    while (in_game) {
         move(*d_pad_up, *d_pad_do, *d_pad_ri, *d_pad_le);
         eatApple();
         wait(4000);
     }
-    
 }
 
-// verifica si se come una manzana, se llama en el ciclo while
-void eatApple() {
-    if (isAppleEaten()) { //verifica si estamos arriba de una manzana
-         // aumenta la longitud de la serpiente solo si no ha alcanzado el tama?o m?ximo
-        if (tamanio < led_matrix_height * led_matrix_width) {
-            tamanio++; //score funciona como el tama?o de la serpiente
-            tamanio++;
+
+
+void initSnake() {
+    snake_head = (volatile unsigned int *)led_base;
+    drawBlock(x_coord, y_coord, 0xFF0000);
+}
+
+void clearLedMatrix() {
+    for (int i = 0; i < led_matrix_height; i++) {
+        for (int j = 0; j < led_matrix_width; j++) {
+            *(led_base + (led_matrix_width * i) + j) = 0x000000;
         }
-        generateApple(); // genera una nueva manzana despues de ser comida
     }
 }
 
-int isAppleEaten() { //cuando la cabeza de la serpiente toca la manzana
-    return snake_head == apple;
-}
 
-void generateApple(){ //genera la manzana
-    srand(next); //inicializa la semilla para generar numeros aleatorios
+void generateApple() {
+    srand(next);
     int y_rand, x_rand;
 
     do {
-        // genera coordenadas aleatorias para la manzana
         y_rand = rand() % led_matrix_height;
         x_rand = rand() % led_matrix_width;
-        //verifica que no aparezcan en el cuerpo de la serpiente o fuera del tablero
     } while (isSnakeBody(x_rand, y_rand) || isOutsideBoard(x_rand, y_rand));
 
-    // asigna la posici?n de la manzana y la pinta de verde
-    apple = led_base + (led_matrix_width * y_rand) + x_rand;
-    *apple = 0x00FF00;
-    next += 1; // se incrementa para la siguiente vez que se genere una manzana aleatoria
+    *apple = led_base + (led_matrix_width * y_rand*2) + x_rand*2;
+    drawBlock(x_rand, y_rand, 0x00FF00);
+    next++;
 }
 
-//verifica si las coordenadas de la manzana se encuentran en el cuerpo de la serpiente
-int isSnakeBody(int x, int y) {
-    for (int i = 0; i < tamanio; i++) { //recorre el cuerpo de la serpiente y si se encuentra coincidencia retorna 1
-        if (snake_body[i] == led_base + (led_matrix_width * y) + x) {
-            return 1;
-        }
-    }
-    return 0; // si no encuentra coincidencia
-}
-
-// Verifica si las coordenadas (x, y) est?n fuera del tablero
-int isOutsideBoard(int x, int y) {
-    return x < 0 || x >= led_matrix_width || y < 0 || y >= led_matrix_height;
-}
-
-//actualiza los leds del tablero para representar a la serpiente
-void updateSnake()
-{
-    if (tamanio) { //verifica que la serpiente exista
-        for (int i = tamanio - 1; i > 0; i--) {
-            // Guarda la posici?n actual de la cabeza como el siguiente segmento del cuerpo
-            snake_body[i] = snake_body[i - 1]; // guarda cada pedazo de la serpiente
-        }
-    }
-    snake_body[0] = snake_head; //establece que el primer pedazo de serpiente es la cabeza
-
-    // actualiza la cabeza a la nueva posici?n
-    snake_head = led_base + (led_matrix_width * y_coord) + x_coord;
-
-    //verifica si la cabeza de la serpiente colisiona con su propio cuerpo
-    for (int i = 1; i < tamanio; i++) {
-        if (snake_head == snake_body[i]) {
-            in_game = 0; // si la serpiente se ha tocado a s? misma, el juego termina
-            return;
-        }
-    }
-
-    // enciende la cabeza de la serpiente
-    *snake_head = 0xFF0000;
-
-    // si la longitud de la serpiente es mayor que el puntaje, apaga el ?ltimo led
-    if (tamanio) {
-        *snake_body[tamanio - 1] = 0x000000; // apaga el led
-        snake_body[tamanio - 1] = 0; // elimina la referencia al led apagado del cuerpo
-    }
-
-    // enciende los leds de cada pedazo de la serpiente
-    for (int i = 1; i < tamanio && i < tamanio; i++) {
-        *snake_body[i] = 0xFF0000; // color rojo
-    }
-}
-
-
-int inBoard() //verifica si la serpiente esta dentro del tablero con las coordenadas de su cabeza
-{
-    if (((x_coord >= 0) && (x_coord <= (led_matrix_width - 1))) && (y_coord >= 0) && (y_coord <= (led_matrix_height - 1)))
-    {
-        return 1;
-    }
-    in_game = 0;
-    return 0;
-}
-
-void initSnake() //inicializa la serpiente con un solo led
-{
-    snake_head = (volatile unsigned int *)led_base;
-    *(int *)snake_head = 0xFF0000;
-}
 
 int movement(int d_pad, int direction, int oposite) //no permite movimientos a la direccion contraria
 {
@@ -171,89 +98,147 @@ int movement(int d_pad, int direction, int oposite) //no permite movimientos a l
     return 0;
 }
 
-void move(int up, int down, int right, int left) //mueve a la serpiente
-{
-    //antes de mover la serpiente, apaga el ?ltimo segmento del cuerpo
+
+void move(int up, int down, int right, int left) {
     if (tamanio) {
-        *snake_body[tamanio - 1] = 0x000000;
+        int tail_x = (snake_body[tamanio - 1] - led_base) % led_matrix_width;
+        int tail_y = (snake_body[tamanio - 1] - led_base) / led_matrix_width;
+        clearBlock(tail_x, tail_y);
     }
 
-
-    if (movement(up, 1, 2)) //movimiento arriba
-    {
+    if (movement(up, 1, 2)) {
         moveUp();
         last_move = 1;
     }
 
-    if (movement(down, 2, 1)) //movimiento abajo
-    {
+    if (movement(down, 2, 1)) {
         moveDown();
         last_move = 2;
     }
 
-    if (movement(left, 3, 4)) //movimiento izquierda
-    {
+    if (movement(left, 3, 4)) {
         moveLeft();
         last_move = 3;
     }
 
-    if (movement(right, 4, 3)) //movimiento derecha
-    {
+    if (movement(right, 4, 3)) {
         moveRight();
         last_move = 4;
     }
 }
 
-void moveUp() //mueve la serpiente
-{
-    y_coord -= 1;//modifica la coordenada necesaria
-    if (inBoard()) //verifica que este dentro del tablero
-    {
-        updateSnake();//actualiza los leds
-        *snake_head = 0xFF0000;//enciende el led de la nueva cabeza
+
+void moveUp() {
+    y_coord -= 1;
+    if (inBoard()) {
+        updateSnake();
+        *snake_head = 0xFF0000;
+        
     }
 }
 
-void moveDown()
-{
-    y_coord += 1;//solo cambia coordenada
-    if (inBoard())
-    {
+void moveDown() {
+    y_coord += 1;
+    if (inBoard()) {
         updateSnake();
         *snake_head = 0xFF0000;
     }
 }
 
-void moveLeft()
-{
-    x_coord -= 1;//solo cambia coordenada
-    if (inBoard())
-    {
+void moveLeft() {
+    x_coord -= 1;
+    if (inBoard()) {
         updateSnake();
         *snake_head = 0xFF0000;
     }
 }
 
-void moveRight()
-{
-    x_coord += 1;//solo cambia coordenada
-    if (inBoard())
-    {
+void moveRight() {
+    x_coord += 1;
+    if (inBoard()) {
         updateSnake();
         *snake_head = 0xFF0000;
     }
 }
 
-void clearLedMatrix() //limpia tablero recorriendolo y apagando todo
-{
-    for (int i = 0x0; i < led_matrix_height; i++)
-    {
-        for (int j = 0x0; j < led_matrix_width; j++)
-        {
-            *(led_base + (led_matrix_width * i) + j) = 0x000000;
+
+void updateSnake() {
+    if (tamanio) {
+        for (int i = tamanio - 1; i > 0; i--) {
+            snake_body[i] = snake_body[i - 1];
         }
     }
+    snake_body[0] = snake_head;
+
+    snake_head = led_base + (led_matrix_width * y_coord) + x_coord;
+
+    for (int i = 1; i < tamanio; i++) {
+        if (snake_head == snake_body[i]) {
+            in_game = 0;
+            return;
+        }
+    }
+
+    drawBlock(x_coord, y_coord, 0xFF0000);
+
+    if (tamanio) {
+        int tail_x = (snake_body[tamanio - 1] - led_base) % led_matrix_width;
+        int tail_y = (snake_body[tamanio - 1] - led_base) / led_matrix_width;
+        clearBlock(tail_x, tail_y);
+        snake_body[tamanio - 1] = 0;
+    }
+
+    for (int i = 1; i < tamanio; i++) {
+        int body_x = (snake_body[i] - led_base) % led_matrix_width;
+        int body_y = (snake_body[i] - led_base) / led_matrix_width;
+        drawBlock(body_x, body_y, 0xFF0000);
+    }
 }
+
+
+int isAppleEaten() {
+    return snake_head == apple;
+}
+
+void eatApple() {
+    if (isAppleEaten()) {
+        if (tamanio < led_matrix_height * led_matrix_width) {
+            tamanio++;
+            tamanio++;
+        }
+        generateApple();
+    }
+}
+
+
+int isSnakeBody(int x, int y) {
+    for (int i = 0; i < tamanio; i++) {
+        if (snake_body[i] == led_base + (led_matrix_width * y) + x) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+
+int isOutsideBoard(int x, int y) {
+    return x < 0 || x >= led_matrix_width || y < 0 || y >= led_matrix_height;
+}
+
+
+void drawBlock(int x, int y, int color) {
+    if (!isOutsideBoard(x, y) && !isOutsideBoard(x + 1, y + 1)) {
+        *(led_base + (led_matrix_width * y) + x) = color;
+        *(led_base + (led_matrix_width * y) + (x + 1)) = color;
+        *(led_base + (led_matrix_width * (y + 1)) + x) = color;
+        *(led_base + (led_matrix_width * (y + 1)) + (x + 1)) = color;
+    }
+}
+
+void clearBlock(int x, int y) {
+    drawBlock(x, y, 0x000000); // Set the block to black
+}
+
 
 void srand(unsigned int seed) //inicializacion numeros aleatorios
 {
@@ -268,7 +253,16 @@ int rand() // trae un numero aleatorio
 
 void wait(int ciclos) //wait 
 {
-    for (int i = 0; i < ciclos; i++)
+    for (int i = 0; i < ciclos; i++);
+}
+
+
+int inBoard() //verifica si la serpiente esta dentro del tablero con las coordenadas de su cabeza
+{
+    if (((x_coord >= 0) && (x_coord <= (led_matrix_width - 1))) && (y_coord >= 0) && (y_coord <= (led_matrix_height - 1)))
     {
+        return 1;
     }
+    in_game = 0;
+    return 0;
 }

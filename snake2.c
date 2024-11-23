@@ -54,7 +54,7 @@ void main() {
     while (in_game) {
         move(*d_pad_up, *d_pad_do, *d_pad_ri, *d_pad_le);
         eatApple();
-        wait(4000);
+        wait(5000);
     }
 }
 
@@ -265,7 +265,7 @@ void srand(unsigned int seed) //inicializacion numeros aleatorios
 
 int rand() // trae un numero aleatorio
 {
-    next = next * 91035733245 + 12945;
+    next = next * 5103577245 + 12945;
     return (unsigned int)(next / 4329736) % 3268;
 }
 

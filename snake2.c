@@ -13,7 +13,7 @@ volatile unsigned int *d_pad_ri = (volatile unsigned int *)D_PAD_0_RIGHT;
 
 volatile unsigned int *snake_body[(led_matrix_height * 2) * (led_matrix_width * 2)];
 volatile unsigned int *snake_head = 0;
-volatile unsigned int *apple = 0;
+volatile unsigned int *apple;
 
 unsigned int next = 1;
 int in_game = 1;
@@ -21,6 +21,9 @@ int last_move = 0;
 int tamanio = 1;
 int x_coord = 0;
 int y_coord = 0;
+int apple_x = 0;
+int apple_y = 0;
+
 
 void initSnake();
 void clearLedMatrix();
@@ -73,17 +76,18 @@ void clearLedMatrix() {
 
 void generateApple() {
     srand(next);
-    int y_rand, x_rand;
 
     do {
-        y_rand = rand() % led_matrix_height;
-        x_rand = rand() % led_matrix_width;
-    } while (isSnakeBody(x_rand, y_rand) || isOutsideBoard(x_rand, y_rand));
+        apple_y = rand() % (led_matrix_height - 1); // Garantizar espacio para 2x2
+        apple_x = rand() % (led_matrix_width - 1);  // Garantizar espacio para 2x2
+    } while (isSnakeBody(apple_x, apple_y) || isSnakeBody(apple_x + 1, apple_y) ||
+             isSnakeBody(apple_x, apple_y + 1) || isSnakeBody(apple_x + 1, apple_y + 1) ||
+             isOutsideBoard(apple_x + 1, apple_y + 1));
 
-    apple = led_base + (led_matrix_width * y_rand) + x_rand;
-    drawBlock(x_rand, y_rand, 0x00FF00);
-    next++;
+    // Dibujar el área de la manzana (2x2)
+    drawBlock(apple_x, apple_y, 0x00FF00);
 }
+
 
 
 int movement(int d_pad, int direction, int oposite) //no permite movimientos a la direccion contraria
@@ -184,7 +188,13 @@ void updateSnake() {
     if (tamanio) {
         int tail_x = (snake_body[tamanio - 1] - led_base) % led_matrix_width;
         int tail_y = (snake_body[tamanio - 1] - led_base) / led_matrix_width;
-        clearBlock(tail_x, tail_y);
+
+        // Verificar si la cola está en el área de la manzana
+        if (!((tail_x >= apple_x && tail_x < apple_x + 2) && 
+              (tail_y >= apple_y && tail_y < apple_y + 2))) {
+            clearBlock(tail_x, tail_y);
+        }
+
         snake_body[tamanio - 1] = 0;
     }
 
@@ -196,15 +206,19 @@ void updateSnake() {
 }
 
 
+
 int isAppleEaten() {
-    return snake_head == apple;
+    return (snake_head == led_base + (apple_y * led_matrix_width) + apple_x ||
+            snake_head == led_base + (apple_y * led_matrix_width) + (apple_x + 1) ||
+            snake_head == led_base + ((apple_y + 1) * led_matrix_width) + apple_x ||
+            snake_head == led_base + ((apple_y + 1) * led_matrix_width) + (apple_x + 1));
 }
+
 
 void eatApple() {
     if (isAppleEaten()) {
         if (tamanio < led_matrix_height * led_matrix_width) {
-            tamanio++;
-            tamanio++;
+            tamanio+=2;
         }
         generateApple();
     }
@@ -236,7 +250,11 @@ void drawBlock(int x, int y, int color) {
 }
 
 void clearBlock(int x, int y) {
-    drawBlock(x, y, 0x000000); // Set the block to black
+    // Verificar si el bloque no es parte del área de la manzana
+    if (!((x >= apple_x && x < apple_x + 2) && 
+          (y >= apple_y && y < apple_y + 2))) {
+        drawBlock(x, y, 0x000000); // Limpia solo si no es parte de la manzana
+    }
 }
 
 

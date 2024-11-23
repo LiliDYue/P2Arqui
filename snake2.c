@@ -13,7 +13,7 @@ volatile unsigned int *d_pad_ri = (volatile unsigned int *)D_PAD_0_RIGHT;
 
 volatile unsigned int *snake_body[(led_matrix_height * 2) * (led_matrix_width * 2)];
 volatile unsigned int *snake_head = 0;
-volatile unsigned int *apple[4];
+volatile unsigned int *apple = 0;
 
 unsigned int next = 1;
 int in_game = 1;
@@ -80,7 +80,7 @@ void generateApple() {
         x_rand = rand() % led_matrix_width;
     } while (isSnakeBody(x_rand, y_rand) || isOutsideBoard(x_rand, y_rand));
 
-    *apple = led_base + (led_matrix_width * y_rand*2) + x_rand*2;
+    apple = led_base + (led_matrix_width * y_rand) + x_rand;
     drawBlock(x_rand, y_rand, 0x00FF00);
     next++;
 }
